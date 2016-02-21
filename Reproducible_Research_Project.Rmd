@@ -1,0 +1,109 @@
+---
+title: Analysis on the Impact of Different Severe Weather Events Across the United
+  States
+output: html_document
+---
+
+##Synopsis
+The basic goal of this analysis is to explore the NOAA Storm Database and answer some basic questions about severe weather events. The analysis looks at which severe weather events are the most harmful in respect to population health as well which have the greatest economic consequences. The results display the top 10 types of severe weather events in order to put things into perspective.
+
+1. Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+2. Across the United States, which types of events have the greatest economic consequences?
+
+
+##Data Processing
+
+Data is downloaded from NOAA Storm Database and loaded into R using read.csv().
+
+```{r}
+setwd("C:/Users/Anthony/Documents/Coursera/05_reproducible/project2")
+df <- read.csv("repdata-data-StormData.csv")
+
+library(plyr)
+library(ggplot2)
+```
+
+
+##Results
+###Across the United States, which types of events (as indicated in the EVTYPE variable) are most harmful with respect to population health?
+
+Based on injuries, tornado was the weather event type that was the most harmful with respect to population health. The amount of total injuries was 91,346.
+
+```{r}
+
+#Group by Event Type
+df_ev <- ddply(df, .(EVTYPE), summarize, tot_inj = sum(INJURIES), tot_fat = sum(FATALITIES))
+
+#Top events most harmful by injuries
+df_ev1 <- head(df_ev[order(-df_ev$tot_inj),], 10)
+
+
+df_ev1$EVTYPE <- factor(df_ev1$EVTYPE, levels=df_ev1$EVTYPE)
+ggplot(df_ev1, aes(x = EVTYPE, y = tot_inj)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        geom_bar(stat = "identity") +
+        xlab("Event Type") +
+        ylab("# Injuries") +
+        ggtitle("Top 10 Weather Event Types: Injuries")
+```
+
+Based on fatalities, tornado was the weather event type that was the most harmful with respect to population health. The amount of total injuries was 5,633.
+
+```{r}
+#Top events most harmful by fatalities
+df_ev2 <- head(df_ev[order(-df_ev$tot_fat),], 10)
+
+df_ev2$EVTYPE <- factor(df_ev2$EVTYPE, levels=df_ev2$EVTYPE)
+ggplot(df_ev2, aes(x = EVTYPE, y = tot_fat)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        geom_bar(stat = "identity") +
+        xlab("Event Type") +
+        ylab("# Fatalities") +
+        ggtitle("Top 10 Weather Event Types: Fatalities")
+
+
+```
+
+
+###Across the United States, which types of events have the greatest economic consequences?
+
+The values of property and crop damage need to be scaled according to whether the PROPDMGEXP or CROPDMGEXP variable has a "K", "M", or "B". K means 1,000's, M means 1,000,000's, and B means 1,000,000,000.
+
+```{r}
+options(warn=-1)
+df_econ <- df
+
+#Property damage scale
+df_econ$prop <- df_econ$PROPDMG
+df_econ$prop[df_econ$PROPDMGEXP=="K"] <- df_econ$prop * 1000
+df_econ$prop[df_econ$PROPDMGEXP=="M"] <- df_econ$prop * 1000000
+df_econ$prop[df_econ$PROPDMGEXP=="B"] <- df_econ$prop * 1000000000
+
+#Crop damage scale
+df_econ$crop <- df_econ$CROPDMG
+df_econ$crop[df_econ$CROPDMGEXP=="K"] <- df_econ$CROPDMG * 1000
+df_econ$crop[df_econ$CROPDMGEXP=="M"] <- df_econ$CROPDMG * 1000000
+df_econ$crop[df_econ$CROPDMGEXP=="B"] <- df_econ$CROPDMG * 1000000000
+
+#combine damages
+df_econ$econ <- df_econ$prop + df_econ$crop
+```
+
+
+Based on property and crop damages, flood/hurricane was the weather event type that had the greatest economic consequences. The amount of total damages from flood amounts to $2.5e19 in damages, followed very closely by hurricanes. These two weather events are very much related and the damages that were reported are overlapping damages.
+
+```{r}
+df_econ1 <- ddply(df_econ, .(EVTYPE), summarize, tot_econ = sum(econ))
+df_econ2 <- head(df_econ1[order(-df_econ1$tot_econ),], 10)
+df_econ2$EVTYPE <- factor(df_econ2$EVTYPE, levels=df_econ2$EVTYPE)
+
+ggplot(df_econ2, aes(x = EVTYPE, y = tot_econ)) +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        geom_bar(stat = "identity") +
+        xlab("Event Type") +
+        ylab("$ Economic Damages") +
+        ggtitle("Top 10 Weather Event Types: Economic Impact")
+
+
+```
